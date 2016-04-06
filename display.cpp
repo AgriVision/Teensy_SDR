@@ -1,26 +1,26 @@
+
 // code for the TFT display
 
 #include "display.h"
 #include <Audio.h>
 #include <Adafruit_GFX.h>        // LCD Core graphics library
-//#include <Adafruit_QDTech.h>     // 1.8" TFT Module using Samsung S6D02A1 chip
-#include <Adafruit_S6D02A1.h> // Hardware-specific library
-//extern Adafruit_QDTech tft;
-extern Adafruit_S6D02A1 tft;
+#include <Adafruit_ST7735.h>
+#include <Fonts/FreeMonoBoldOblique12pt7b.h>
+
+extern Adafruit_ST7735 tft;
 
 extern AudioAnalyzeFFT256  myFFT;      // FFT for Spectrum Display
 
 void setup_display(void) {
   
   // initialize the LCD display
-//  tft.init();
   tft.initR(INITR_BLACKTAB);   // initialize a S6D02A1S chip, black tab
   tft.setRotation(1);
   tft.fillScreen(BLACK);
   tft.setCursor(0, 115);
   tft.setTextColor(WHITE);
   tft.setTextWrap(true);
-  tft.print("Teensy SDR 1.1");
+  tft.print("Teensy SDR 1.2"); // to distinquish from original Teensy SDR which was on 1.1
   
   // Show mid screen tune position
   tft.drawFastVLine(80, 0,60,RED);

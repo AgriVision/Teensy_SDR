@@ -39,8 +39,8 @@
 #include <Encoder.h>
 #include <Bounce2.h>
 #include <Adafruit_GFX.h>   // LCD Core graphics library
-//#include <Adafruit_QDTech.h>// 1.8" TFT Module using Samsung S6D02A1 chip
-#include <Adafruit_S6D02A1.h> // Hardware-specific library
+#include <Adafruit_ST7735.h> // Hardware-specific library
+
 #include <SPI.h>
 #include "filters.h"
 #include "display.h"
@@ -54,9 +54,10 @@
 
 #include "Si570.h"
 #define SI570_I2C_ADDRESS 0x55
+#endif
 #define SEL0_PIN 4
 #define SEL1_PIN 8
-#endif
+
 
 #ifdef SI5351
 #include <si5351.h>
@@ -117,16 +118,14 @@ struct band bands[NUM_BANDS] = {
 #endif
 
 
-//SPI connections for Banggood 1.8" display
-const int8_t sclk   = 5;
-const int8_t mosi   = 4;
+//SPI connections for Adafruit ST7735 1.8" display
+const int8_t sclk   = 14;
+const int8_t mosi   = 7;
 const int8_t cs     = 2;
 const int8_t dc     = 3;
 const int8_t rst    = 1;
 
-//Adafruit_QDTech tft = Adafruit_QDTech(cs, dc, mosi, sclk, rst);
-// Adafruit_S6D02A1 tft = Adafruit_S6D02A1(cs, dc, mosi, sclk, rst); // soft SPI
-Adafruit_S6D02A1 tft = Adafruit_S6D02A1(cs, dc,rst);  // hardware SPI
+Adafruit_ST7735 tft = Adafruit_ST7735(cs, dc, mosi, sclk, rst); // soft SPI
 
 #define  BACKLIGHT  0  // backlight control signal
 
@@ -359,6 +358,7 @@ void setup()
   SPI.setMOSI(7); // set up HW SPI for use with the audio card - alternate pins
   SPI.setSCK(14);	
   setup_display();
+
 
 // set up initial band and frequency
   show_band(bands[STARTUP_BAND].name);

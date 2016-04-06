@@ -3,13 +3,11 @@
 
 #include <Metro.h>
 #include <Audio.h>
+#include <Adafruit_GFX.h>    // LCD Core graphics library
+#include <Adafruit_ST7735.h> // Hardware-specific library
+#include "display.h"
 
-#include <Adafruit_GFX.h>        // LCD Core graphics library
-//#include <Adafruit_QDTech.h>     // 1.8" TFT Module using Samsung S6D02A1 chip
-#include <Adafruit_S6D02A1.h> // Hardware-specific library
-
-//extern Adafruit_QDTech tft;
-extern Adafruit_S6D02A1 tft;
+extern Adafruit_ST7735 tft;
 
 extern AudioMixer4     Audioselector_I;      // Summer (add inputs)
 extern AudioMixer4     Audioselector_Q;      // Summer (add inputs)
@@ -105,7 +103,7 @@ void agc(void)
       }
       else dbuv = 0;
       // Print S units
-      tft.fillRect(10, 85, 30, 7,S6D02A1_BLACK);
+      tft.fillRect(10, 85, 30, 7,BLACK);
       tft.setCursor(0, 85);
       if (dbuv == 0) sprintf(string,"S:%1.0f",s);
       else sprintf(string,"S:9+%02.0f",dbuv);
@@ -114,7 +112,7 @@ void agc(void)
       if(0)  // Debug stuff
       {
         // Print AGC loop parameters
-        tft.fillRect(0, 105, 159, 7,S6D02A1_BLACK);
+        tft.fillRect(0, 105, 159, 7,BLACK);
         tft.setCursor(0, 105);
         sprintf(string,"pk:%f g:%f",Smeter.read(), AGCgain);
         tft.print(string);

@@ -1,10 +1,10 @@
 // TFT stuff - change these defs for your specific LCD
-#define BLACK   S6D02A1_BLACK
-#define WHITE   S6D02A1_WHITE
-#define RED     S6D02A1_RED
-#define GREEN   S6D02A1_GREEN
-#define YELLOW  S6D02A1_YELLOW
-#define BLUE    S6D02A1_BLUE
+#define BLACK   ST7735_BLACK
+#define WHITE   ST7735_WHITE
+#define RED     ST7735_RED
+#define GREEN   ST7735_GREEN
+#define YELLOW  ST7735_YELLOW
+#define BLUE    ST7735_BLUE
 
 #define  USB_WIDE    0  // filter modes
 #define  USB_NARROW  1
