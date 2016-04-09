@@ -5,7 +5,7 @@
 #include <Audio.h>
 #include <Adafruit_GFX.h>        // LCD Core graphics library
 #include <Adafruit_ST7735.h>
-#include <Fonts/FreeMonoBoldOblique12pt7b.h>
+//#include <Fonts/FreeMonoBoldOblique12pt7b.h>
 
 extern Adafruit_ST7735 tft;
 

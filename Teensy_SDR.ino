@@ -54,6 +54,7 @@
 
 #include "Si570.h"
 #define SI570_I2C_ADDRESS 0x55
+#define SI570_CALIBRATION 42800000
 #endif
 #define SEL0_PIN 4
 #define SEL1_PIN 8
@@ -365,14 +366,13 @@ void setup()
   
 #ifdef SI570
 
-  vfo = new Si570(SI570_I2C_ADDRESS, 56320000);
+  vfo = new Si570(SI570_I2C_ADDRESS, SI570_CALIBRATION);
 
   if (vfo->status == SI570_ERROR) {
     // The Si570 is unreachable. Show an error for 3 seconds and continue.
     Serial.print("I2C Si570 error.");
     delay(10000);
   }
-
   vfo->setFrequency((unsigned long)bands[STARTUP_BAND].freq * MASTER_CLK_MULT);
 
   delay(3);
@@ -391,7 +391,7 @@ void setup()
 
 #endif
   
-  setup_RX(SSB_USB);  // set up the audio chain for USB reception
+  setup_RX(SSB_LSB);  // set up the audio chain for LSB reception
 
 #ifdef DEBUG
   Serial.println("audio RX path initialized");
@@ -505,11 +505,13 @@ void loop()
 //  if ((lcd_upd.check() == 1) && myFFT.available()) show_spectrum();
   if ((lcd_upd.check() == 1)) show_spectrum();
 
+#ifdef DEBUG_TIMING
   if ((CW_sample.check() == 1)) {
     digitalWrite(DEBUG_PIN,1); // for timing measurements
     delay(1);
     digitalWrite(DEBUG_PIN,0); // 
   }
+#endif
   
 #ifdef CW_WATERFALL
   if ((waterfall_upd.check() == 1) && myFFT.available()) show_waterfall();
