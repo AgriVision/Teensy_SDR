@@ -66,6 +66,8 @@
 
 extern void agc(void);      // RX agc function
 extern void setup_display(void);
+extern void intro_display(void);
+extern void main_display(void);
 extern void show_spectrum(void);  // spectrum display draw
 extern void show_waterfall(void); // waterfall display
 extern void show_bandwidth(int filterwidth);  // show filter bandwidth
@@ -301,7 +303,7 @@ void setup()
   digitalWrite(PTTout,0); // turn off TX mode
   PTT_in.attach(PTTSW);    // PPT switch debouncer
   PTT_in.interval(5);  // 5ms
-  
+
   
 #ifdef SI570
   pinMode(SEL1_PIN, OUTPUT); 	// set SEL1_PIN and SEL1_PIN as ouputs
@@ -359,6 +361,9 @@ void setup()
   SPI.setMOSI(7); // set up HW SPI for use with the audio card - alternate pins
   SPI.setSCK(14);	
   setup_display();
+  intro_display();
+  delay(5000);
+  main_display();
 
 
 // set up initial band and frequency

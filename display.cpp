@@ -4,8 +4,9 @@
 #include "display.h"
 #include <Audio.h>
 #include <Adafruit_GFX.h>        // LCD Core graphics library
+#include <Fonts/FreeSans9pt7b.h>
+#include <Fonts/FreeSans12pt7b.h>
 #include <Adafruit_ST7735.h>
-//#include <Fonts/FreeMonoBoldOblique12pt7b.h>
 
 extern Adafruit_ST7735 tft;
 
@@ -17,11 +18,29 @@ void setup_display(void) {
   tft.initR(INITR_BLACKTAB);   // initialize a S6D02A1S chip, black tab
   tft.setRotation(1);
   tft.fillScreen(BLACK);
-  tft.setCursor(0, 115);
+}
+
+void intro_display(void) {
+  tft.setFont(&FreeSans12pt7b);
   tft.setTextColor(WHITE);
   tft.setTextWrap(true);
-  tft.print("Teensy SDR 1.2"); // to distinquish from original Teensy SDR which was on 1.1
-  
+  tft.setCursor(0,30);
+  tft.print("Teensy SDR");
+  tft.setFont(&FreeSans9pt7b);
+  tft.setCursor(0,50);
+  tft.print("by rheslip");
+  tft.setCursor(0,80);
+  tft.print("PA3BYA");
+  tft.setCursor(0,100);
+  tft.print("version: 1.0");
+  tft.setCursor(0,120);
+  tft.print("build: ");
+  tft.print(__DATE__);  
+}
+
+void main_display(void) {
+  tft.fillScreen(BLACK);
+  tft.setFont(&FreeSans9pt7b);  
   // Show mid screen tune position
   tft.drawFastVLine(80, 0,60,RED);
 }
@@ -112,31 +131,41 @@ void show_bandwidth(int filtermode) {
       tft.drawFastHLine(80,62,20, RED);
     break;
   }
-}  
-
+} 
+ 
+// show signal strength
+void show_signalstrength(String s) {
+  tft.setFont(&FreeSans9pt7b);  
+  tft.fillRect(12, 72, 40, 14,BLACK);
+  tft.setCursor(0, 85);
+  tft.print(s);
+}
 
 // show radio mode
 void show_radiomode(String mode) { 
-  tft.fillRect(125, 85, 30, 7, BLACK); // erase old string
+  tft.fillRect(106, 72, 54, 14, BLACK); // erase old string
+  tft.setFont(&FreeSans9pt7b);  
   tft.setTextColor(WHITE);
-  tft.setCursor(125, 85);
+  tft.setCursor(106, 85);
   tft.print(mode);
 }  
 
 void show_band(String bandname) {  // show band
-  tft.fillRect(100, 85, 19, 7, BLACK); // erase old string
+  tft.fillRect(60, 72, 40, 14, BLACK); // erase old string
+  tft.setFont(&FreeSans9pt7b);  
   tft.setTextColor(WHITE);
-  tft.setCursor(100, 85);
+  tft.setCursor(60, 85);
   tft.print(bandname);
 }
 
 // show frequency
 void show_frequency(long int freq) { 
+    tft.setFont(&FreeSans12pt7b);
     char string[80];   // print format stuff
     sprintf(string,"%d.%03d.%03d",freq/1000000,(freq-freq/1000000*1000000)/1000,
           freq%1000 );
-    tft.fillRect(100,115,100,120,BLACK);
-    tft.setCursor(100, 115);
+    tft.fillRect(30,108,120,18,BLACK);
+    tft.setCursor(30, 125);
     tft.setTextColor(WHITE);
     tft.print(string); 
 }    

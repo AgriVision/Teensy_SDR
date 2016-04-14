@@ -8,7 +8,7 @@
 #include "display.h"
 
 extern Adafruit_ST7735 tft;
-
+extern void show_signalstrength(String);
 extern AudioMixer4     Audioselector_I;      // Summer (add inputs)
 extern AudioMixer4     Audioselector_Q;      // Summer (add inputs)
 extern AudioAnalyzePeak       AGCpeak;  // Measure Audio Peak for AGC use
@@ -103,11 +103,9 @@ void agc(void)
       }
       else dbuv = 0;
       // Print S units
-      tft.fillRect(10, 85, 30, 7,BLACK);
-      tft.setCursor(0, 85);
       if (dbuv == 0) sprintf(string,"S:%1.0f",s);
       else sprintf(string,"S:9+%02.0f",dbuv);
-      tft.print(string);
+      show_signalstrength(string);
  
       if(0)  // Debug stuff
       {
