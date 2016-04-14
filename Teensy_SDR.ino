@@ -76,7 +76,7 @@ extern void show_band(String bandname);  // show band
 extern void show_frequency(long freq);  // show frequency
 
 //#define  DEBUG
-//#define DEBUG_TIMING  // for timing execution - monitor HW pin
+#define DEBUG_TIMING  // for timing execution - monitor HW pin
 
 // SW configuration defines
 // don't use more than one AGC!
@@ -86,7 +86,7 @@ extern void show_frequency(long freq);  // show frequency
 // it should work well for ALC (mic input) though
 //#define HW_AGC // define for codec AGC 
 //#define CW_WATERFALL // define for experimental CW waterfall - needs faster update rate
-//#define AUDIO_STATS    // shows audio library CPU utilization etc on serial console
+#define AUDIO_STATS    // shows audio library CPU utilization etc on serial console
 
 // band selection stuff
 struct band {
@@ -135,8 +135,8 @@ Adafruit_ST7735 tft = Adafruit_ST7735(cs, dc, mosi, sclk, rst); // soft SPI
 // UI switch definitions
 // encoder switch
 Encoder tune(16, 17);
-#define TUNE_STEP       1    // slow tuning rate 1hz steps
-#define FAST_TUNE_STEP   100   // fast tuning rate 100hz steps
+#define TUNE_STEP       5    // slow tuning rate 5hz steps
+#define FAST_TUNE_STEP   500   // fast tuning rate 500hz steps
 
 // Switches between pin and ground for USB/LSB/CW modes
 const int8_t ModeSW =21;    // USB/LSB
