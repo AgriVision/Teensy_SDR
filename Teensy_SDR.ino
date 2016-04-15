@@ -76,15 +76,15 @@ extern void show_band(String bandname);  // show band
 extern void show_frequency(long freq);  // show frequency
 
 //#define  DEBUG
-#define DEBUG_TIMING  // for timing execution - monitor HW pin
+//#define DEBUG_TIMING  // for timing execution - monitor HW pin
 
 // SW configuration defines
 // don't use more than one AGC!
-#define SW_AGC   // define for Loftur's SW AGC - this has to be tuned carefully for your particular implementation
+//#define SW_AGC   // define for Loftur's SW AGC - this has to be tuned carefully for your particular implementation
 // codec hardware AGC works but it looks at the entire input bandwidth 
 // ie codec HW AGC works on the strongest signal, not necessarily what you are listening to
 // it should work well for ALC (mic input) though
-//#define HW_AGC // define for codec AGC 
+#define HW_AGC // define for codec AGC 
 //#define CW_WATERFALL // define for experimental CW waterfall - needs faster update rate
 #define AUDIO_STATS    // shows audio library CPU utilization etc on serial console
 
