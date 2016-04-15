@@ -1,5 +1,14 @@
-# Teensy_SDR  
-Software defined radio using Teensy 3.1, Teensy Audio shield and Softrock  
+# Teensy_SDR (modification PA3BYA)
+Software defined radio using Teensy 3.1/3.2, Teensy Audio shield and Softrock
+This specific fork is modified by PA3BYA, for the following hardware:
+- Teensy 3.2 + Audio Shield
+- SoftRock RXTX 6.3 using Si570
+- 9V1AL Motherboard 3.6
+- 100 pulses/rev rotary encoder for VFO
+- cheap (24?) pulses/rev rotary encoder + switch for menu selection
+
+Below is the original readme from rheslip
+---
 
 This is a software defined radio using the Arduino compatible Teensy 3.1 and audio shield from PJRC. 
 It takes advantage of the audio library supplied by PJRC to implement the audio signal processing chain.
@@ -36,5 +45,5 @@ TODO:
 - UI improvements - configuration settings etc  
 - clean up display code - remove direct x,y references to allow easier modifications  
 
-project blog: rheslip.blogspot.com
+original project blog: rheslip.blogspot.com
 
