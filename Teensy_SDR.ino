@@ -69,6 +69,7 @@ extern void setup_display(void);
 extern void intro_display(void);
 extern void main_display(void);
 extern void show_spectrum(void);  // spectrum display draw
+extern void show_Smeter(void); // Smeter display
 extern void show_waterfall(void); // waterfall display
 extern void show_bandwidth(int filterwidth);  // show filter bandwidth
 extern void show_radiomode(String mode);  // show filter bandwidth
@@ -135,8 +136,8 @@ Adafruit_ST7735 tft = Adafruit_ST7735(cs, dc, mosi, sclk, rst); // soft SPI
 // UI switch definitions
 // encoder switch
 Encoder tune(16, 17);
-#define TUNE_STEP       5    // slow tuning rate 5hz steps
-#define FAST_TUNE_STEP   500   // fast tuning rate 500hz steps
+#define TUNE_STEP       1    // slow tuning rate 1hz steps for 100 pulses/ref encoder
+#define FAST_TUNE_STEP   100   // fast tuning rate 100hz steps
 
 // Switches between pin and ground for USB/LSB/CW modes
 const int8_t ModeSW =21;    // USB/LSB
@@ -181,6 +182,7 @@ Metro ms_100 = Metro(100);  // Set up a 100ms Metro
 Metro ms_50 = Metro(50);  // Set up a 50ms Metro for polling switches
 Metro lcd_upd =Metro(10);  // Set up a Metro for LCD updates
 Metro CW_sample =Metro(10);  // Set up a Metro for LCD updates
+Metro Smetertimer = Metro(50); // Smeter timer
 
 #ifdef CW_WATERFALL
 Metro waterfall_upd =Metro(25);  // Set up a Metro for waterfall updates
@@ -362,7 +364,7 @@ void setup()
   SPI.setSCK(14);	
   setup_display();
   intro_display();
-  delay(5000);
+  delay(2000);
   main_display();
 
 
@@ -509,6 +511,7 @@ void loop()
   //
 //  if ((lcd_upd.check() == 1) && myFFT.available()) show_spectrum();
   if ((lcd_upd.check() == 1)) show_spectrum();
+  if ((Smetertimer.check() == 1)) show_Smeter();
 
 #ifdef DEBUG_TIMING
   if ((CW_sample.check() == 1)) {

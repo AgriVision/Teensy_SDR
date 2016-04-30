@@ -107,11 +107,12 @@ void agc(void)
       else sprintf(string,"S:9+%02.0f",dbuv);
       show_signalstrength(string);
  
-      if(0)  // Debug stuff
+      if(1)  // Debug stuff
       {
         // Print AGC loop parameters
-        tft.fillRect(0, 105, 159, 7,BLACK);
-        tft.setCursor(0, 105);
+        tft.setFont();
+        tft.fillRect(0, 95, 159, 9,BLUE);
+        tft.setCursor(0, 96);
         sprintf(string,"pk:%f g:%f",Smeter.read(), AGCgain);
         tft.print(string);
       }

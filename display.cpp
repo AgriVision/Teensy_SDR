@@ -8,12 +8,27 @@
 #include <Fonts/FreeSans12pt7b.h>
 #include <Adafruit_ST7735.h>
 
-extern Adafruit_ST7735 tft;
+#define pos_x_smeter 5
+#define pos_y_smeter 80
+#define s_w 10
+#define pos_x_freq 30
+#define pos_y_freq 104
 
+//#define DEBUG_SMETER
+#ifdef DEBUG_SMETER
+#include <Metro.h>
+extern Metro five_sec;
+#endif
+
+float uv, uvold, dbuv, dbm, s;// microvolts, db-microvolts, s-units, volts, dbm, sold = old S-meter value, deltas = abs difference between sold and s
+float line_gain = 0; // possibly different for different bands, see software DD4DH
+
+extern Adafruit_ST7735 tft;
 extern AudioAnalyzeFFT256  myFFT;      // FFT for Spectrum Display
+void show_s_meter_layout(void);
+extern AudioAnalyzePeak       Smeter;   // Measure Audio Peak for S meter
 
 void setup_display(void) {
-  
   // initialize the LCD display
   tft.initR(INITR_BLACKTAB);   // initialize a S6D02A1S chip, black tab
   tft.setRotation(1);
@@ -28,7 +43,7 @@ void intro_display(void) {
   tft.print("Teensy SDR");
   tft.setFont(&FreeSans9pt7b);
   tft.setCursor(0,50);
-  tft.print("by rheslip");
+  tft.print("by VE3MKC");
   tft.setCursor(0,80);
   tft.print("PA3BYA");
   tft.setCursor(0,100);
@@ -43,6 +58,7 @@ void main_display(void) {
   tft.setFont(&FreeSans9pt7b);  
   // Show mid screen tune position
   tft.drawFastVLine(80, 0,60,RED);
+  show_s_meter_layout();
 }
 
 // draw the spectrum display
@@ -89,6 +105,59 @@ void show_spectrum(void) {
 }
 */
 
+void show_Smeter(void) {
+    float s_sample = 0;  // Raw signal strength (max per 1ms)
+    // Collect S-meter data
+    if (Smeter.available()) s_sample = Smeter.read(); // Highest sample within 1 millisecond
+     // Calculate S units. 50uV = S9
+      uv = (s_sample-0.005)*10000;  // microvolts, roughly calibrated
+      uv = 0.1 * uv + 0.9 * uvold; // low pass filtering for Smeter values 
+      dbuv = 20.0*log10(uv);
+      s = 1.0 + (14.0 + dbuv)/6.0;
+
+#ifdef DEBUG_SMETER
+    if (five_sec.check() == 1)
+    {
+      Serial.print("s_sample = ");
+      Serial.print(s_sample);
+      Serial.print(" uv = ");    
+      Serial.print(uv);
+      Serial.print(" s =");
+      Serial.print(s);
+      Serial.print(" dbuv = ");    
+      Serial.print(dbuv);
+      Serial.println("");
+    }
+#endif  
+      if (s <0.0) s=0.0;
+      if (s>9.0)
+      {
+        dbuv = dbuv - 34.0;
+        s = 9.0;
+      }
+      else dbuv = 0;
+      uvold = uv;
+
+      tft.drawFastHLine(pos_x_smeter, pos_y_smeter, s*s_w+1, YELLOW);
+      tft.drawFastHLine(pos_x_smeter+s*s_w+1, pos_y_smeter, (9*s_w+1)-s*s_w+1, BLACK);
+
+      tft.drawFastHLine(pos_x_smeter, pos_y_smeter+1, s*s_w+1, YELLOW);
+      tft.drawFastHLine(pos_x_smeter+s*s_w+1, pos_y_smeter+1, (9*s_w+1)-s*s_w+1, BLACK);
+      tft.drawFastHLine(pos_x_smeter, pos_y_smeter+2, s*s_w+1, YELLOW);
+      tft.drawFastHLine(pos_x_smeter+s*s_w+1, pos_y_smeter+2, (9*s_w+1)-s*s_w+1, BLACK);
+
+   //   tft.drawFastHLine(pos_x_smeter, pos_y_smeter+3, s*s_w+1, BLUE);
+   //   tft.drawFastHLine(pos_x_smeter+s*s_w+1, pos_y_smeter+3, (9*s_w+1)-s*s_w+1, BLACK);
+
+      if(dbuv>30) dbuv=30;
+      tft.drawFastHLine(pos_x_smeter+9*s_w+1, pos_y_smeter, (dbuv/5)*s_w+1, RED);
+      tft.drawFastHLine(pos_x_smeter+9*s_w+(dbuv/5)*s_w+1, pos_y_smeter, (6*s_w+1)-(dbuv/5)*s_w, BLACK);
+      tft.drawFastHLine(pos_x_smeter+9*s_w+1, pos_y_smeter+1, (dbuv/5)*s_w+1, RED);
+      tft.drawFastHLine(pos_x_smeter+9*s_w+(dbuv/5)*s_w+1, pos_y_smeter+1, (6*s_w+1)-(dbuv/5)*s_w, BLACK);
+      tft.drawFastHLine(pos_x_smeter+9*s_w+1, pos_y_smeter+2, (dbuv/5)*s_w+1, RED);
+      tft.drawFastHLine(pos_x_smeter+9*s_w+(dbuv/5)*s_w+1, pos_y_smeter+2, (6*s_w+1)-(dbuv/5)*s_w, BLACK);
+}
+
 void show_waterfall(void) {
   // experimental waterfall display for CW -
   // this should probably be on a faster timer since it needs to run as fast as possible to catch CW edges
@@ -132,7 +201,45 @@ void show_bandwidth(int filtermode) {
     break;
   }
 } 
- 
+
+void show_s_meter_layout() {
+  tft.drawFastHLine (pos_x_smeter, pos_y_smeter-1, 9*s_w, WHITE);
+  tft.drawFastHLine (pos_x_smeter, pos_y_smeter+3, 9*s_w, WHITE);
+  tft.fillRect(pos_x_smeter, pos_y_smeter-3, 2, 2, WHITE);
+  tft.fillRect(pos_x_smeter+8*s_w, pos_y_smeter-3, 2, 2, WHITE);
+  tft.fillRect(pos_x_smeter+2*s_w, pos_y_smeter-3, 2, 2, WHITE);
+  tft.fillRect(pos_x_smeter+4*s_w, pos_y_smeter-3, 2, 2, WHITE);
+  tft.fillRect(pos_x_smeter+6*s_w, pos_y_smeter-3, 2, 2, WHITE);
+  tft.fillRect(pos_x_smeter+7*s_w, pos_y_smeter-4, 2, 3, WHITE);
+  tft.fillRect(pos_x_smeter+3*s_w, pos_y_smeter-4, 2, 3, WHITE);
+  tft.fillRect(pos_x_smeter+5*s_w, pos_y_smeter-4, 2, 3, WHITE);
+  tft.fillRect(pos_x_smeter+s_w, pos_y_smeter-4, 2, 3, WHITE);
+  tft.fillRect(pos_x_smeter+9*s_w, pos_y_smeter-4, 2, 3, WHITE);
+  tft.drawFastHLine (pos_x_smeter+9*s_w, pos_y_smeter-1, 3*s_w*2+2, GREEN);
+  tft.drawFastHLine (pos_x_smeter+9*s_w, pos_y_smeter+3, 3*s_w*2+2, GREEN);
+  tft.fillRect(pos_x_smeter+11*s_w, pos_y_smeter-4, 2, 3, GREEN);
+  tft.fillRect(pos_x_smeter+13*s_w, pos_y_smeter-4, 2, 3, GREEN);
+  tft.fillRect(pos_x_smeter+15*s_w, pos_y_smeter-4, 2, 3, GREEN);
+  tft.drawFastVLine (pos_x_smeter-1, pos_y_smeter-1, 5, WHITE); 
+  tft.drawFastVLine (pos_x_smeter+15*s_w+2, pos_y_smeter-1, 5, GREEN);
+
+  tft.setFont();
+  tft.setCursor(pos_x_smeter - 4, pos_y_smeter - 13);
+  tft.setTextColor(WHITE);
+  tft.setTextWrap(true);
+  tft.print("S 1");
+  tft.setCursor(pos_x_smeter + 28, pos_y_smeter - 13);
+  tft.print("3");
+  tft.setCursor(pos_x_smeter + 48, pos_y_smeter - 13);
+  tft.print("5");
+  tft.setCursor(pos_x_smeter + 68, pos_y_smeter - 13);
+  tft.print("7");
+  tft.setCursor(pos_x_smeter + 88, pos_y_smeter - 13);
+  tft.print("9");
+  tft.setCursor(pos_x_smeter + 120, pos_y_smeter - 13);
+  tft.print("+20dB");
+}
+
 // show signal strength
 void show_signalstrength(String s) {
   tft.setFont(&FreeSans9pt7b);  
@@ -143,18 +250,18 @@ void show_signalstrength(String s) {
 
 // show radio mode
 void show_radiomode(String mode) { 
-  tft.fillRect(106, 72, 54, 14, BLACK); // erase old string
+  tft.fillRect(106, 108, 54, 14, BLACK); // erase old string
   tft.setFont(&FreeSans9pt7b);  
   tft.setTextColor(WHITE);
-  tft.setCursor(106, 85);
+  tft.setCursor(106, 125);
   tft.print(mode);
 }  
 
 void show_band(String bandname) {  // show band
-  tft.fillRect(60, 72, 40, 14, BLACK); // erase old string
+  tft.fillRect(60, 108, 40, 14, BLACK); // erase old string
   tft.setFont(&FreeSans9pt7b);  
   tft.setTextColor(WHITE);
-  tft.setCursor(60, 85);
+  tft.setCursor(60, 125);
   tft.print(bandname);
 }
 
@@ -164,8 +271,8 @@ void show_frequency(long int freq) {
     char string[80];   // print format stuff
     sprintf(string,"%d.%03d.%03d",freq/1000000,(freq-freq/1000000*1000000)/1000,
           freq%1000 );
-    tft.fillRect(30,108,120,18,BLACK);
-    tft.setCursor(30, 125);
+    tft.fillRect(pos_x_freq,pos_y_freq-17,120,18,BLACK);
+    tft.setCursor(pos_x_freq, pos_y_freq);
     tft.setTextColor(WHITE);
     tft.print(string); 
 }    
