@@ -111,7 +111,8 @@ void show_Smeter(void) {
     if (Smeter.available()) s_sample = Smeter.read(); // Highest sample within 1 millisecond
      // Calculate S units. 50uV = S9
       uv = (s_sample-0.005)*10000;  // microvolts, roughly calibrated
-      uv = 0.1 * uv + 0.9 * uvold; // low pass filtering for Smeter values 
+      if (uv<0.1) uv = 0.1; // protect for negative uv
+      uv = 0.3 * uv + 0.7 * uvold; // low pass filtering for Smeter values 
       dbuv = 20.0*log10(uv);
       s = 1.0 + (14.0 + dbuv)/6.0;
 
