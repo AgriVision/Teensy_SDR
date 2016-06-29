@@ -76,6 +76,7 @@ extern void show_radiomode(String mode);  // show filter bandwidth
 extern void show_band(String bandname);  // show band
 extern void show_frequency(long freq);  // show frequency
 
+
 //#define  DEBUG
 //#define DEBUG_TIMING  // for timing execution - monitor HW pin
 
@@ -134,14 +135,29 @@ Adafruit_ST7735 tft = Adafruit_ST7735(cs, dc, mosi, sclk, rst); // soft SPI
 #define  BACKLIGHT  0  // backlight control signal
 
 // UI switch definitions
-// encoder switch
+// encoder for tuning
 Encoder tune(16, 17);
 #define TUNE_STEP       1    // slow tuning rate 1hz steps for 100 pulses/ref encoder
 #define FAST_TUNE_STEP   100   // fast tuning rate 100hz steps
 
+// encoder for functions
+//Encoder encoder_functions(20,21);
+#define encoderPinA  20
+#define encoderPinB  21
+//#define buttonPin 5
+// Instantiate three Bounce objects for all pins with digitalRead
+Bounce debouncerA = Bounce(); 
+Bounce debouncerB = Bounce(); 
+//Bounce debouncer5 = Bounce();
+
+int lastEncoded = 0;
+int encoderValue = 0;
+int lastencoderValue = 0;
+
+
 // Switches between pin and ground for USB/LSB/CW modes
-const int8_t ModeSW =21;    // USB/LSB
-const int8_t BandSW =20;    // band selector
+const int8_t ModeSW =6;    // USB/LSB
+const int8_t BandSW =6;    // band selector
 const int8_t TuneSW =6;    // low for fast tune - encoder pushbutton
 
 // SEL0 and SEL1 control lines for the Softrock RX ABPF
@@ -153,7 +169,7 @@ const int8_t SEL1 = SEL1_PIN;   // - SEL1 - Teensy pin SEL1_PIN -> ATTiny85 pin 
 #ifdef  DEBUG_TIMING
 #define DEBUG_PIN   4
 #endif
-const int8_t PTTSW = 10;    // also used as SDCS on the audio card - can't use an SD card!
+const int8_t PTTSW = 6;    // also used as SDCS on the audio card - can't use an SD card!
 const int8_t PTTout = 5;    // PTT signal to softrock
 
 Bounce  PTT_in = Bounce();   // debouncer
@@ -306,6 +322,30 @@ void setup()
   PTT_in.attach(PTTSW);    // PPT switch debouncer
   PTT_in.interval(5);  // 5ms
 
+  // function encoder
+  pinMode(encoderPinA, INPUT_PULLUP); 
+  pinMode(encoderPinB, INPUT_PULLUP);
+  //pinMode(buttonPin, INPUT_PULLUP);
+  debouncerA.attach(encoderPinA);
+  debouncerA.interval(5);
+  debouncerB.attach(encoderPinB);
+  debouncerB.interval(5);
+  //debouncer5.attach(buttonPin);
+  //debouncer5.interval(5);
+  //get starting position
+  debouncerA.update();
+  debouncerB.update();
+
+  int lastMSB = debouncerA.read(); 
+  int lastLSB = debouncerB.read(); 
+#ifdef DEBUG
+  Serial.print("Starting Position AB  " );
+  Serial.print(lastMSB);
+  Serial.println(lastLSB);
+#endif
+
+  //let start be lastEncoded so will index on first click
+  lastEncoded = (lastMSB << 1) |lastLSB;
   
 #ifdef SI570
   pinMode(SEL1_PIN, OUTPUT); 	// set SEL1_PIN and SEL1_PIN as ouputs
@@ -403,15 +443,18 @@ void setup()
 #ifdef DEBUG
   Serial.println("audio RX path initialized");
 #endif
+
 }
 
 
 void loop() 
 {
-  static uint8_t mode=SSB_USB, modesw_state=0;
+  static uint8_t modesw_state=0;
+  static int mode=SSB_LSB, stepswitch;
   static uint8_t band=STARTUP_BAND, Bandsw_state=0;
   static long encoder_pos=0, last_encoder_pos=999;
-  long encoder_change;
+  static long function_encoder_pos=0, function_last_encoder_pos=999;
+  long encoder_change, function_encoder_change;
 
 // tune radio using encoder switch  
   encoder_pos=tune.read();
@@ -433,6 +476,16 @@ void loop()
     show_frequency(bands[band].freq + IF_FREQ);  // frequency we are listening to
   }
 
+    // function encoder switch handling
+    stepswitch = functionencoder();
+    if (stepswitch != 0) {
+      mode = mode + stepswitch;  
+      if(mode > CWR) mode=SSB_USB; // cycle thru radio modes 
+      if(mode < SSB_USB) mode = CWR;
+      setup_RX(mode);  // set up the audio chain for new mode
+    }
+    
+    
   // every 50 ms, adjust the volume and check the switches
   if (ms_50.check() == 1) {
     float vol = analogRead(15);
@@ -679,5 +732,53 @@ void setband(unsigned long freq)
   }
 }
 
-
 #endif
+
+int functionencoder(void) {
+  // function encoder
+  debouncerA.update();
+  debouncerB.update();
+  int MSB = debouncerA.read();//MSB = most significant bit
+  int LSB = debouncerB.read();//LSB = least significant bit
+  int returnval = 0;
+  int encoded = (MSB << 1) |LSB; //converting the 2 pin values to single number
+  int sum  = (lastEncoded << 2) | encoded; //adding it to the previous encoded value
+
+  //test against quadrature patterns CW and CCW
+  if(sum == 0b1101 || sum == 0b0100 || sum == 0b0010 || sum == 0b1011) encoderValue++;
+  if(sum == 0b1110 || sum == 0b0111 || sum == 0b0001 || sum == 0b1000) encoderValue--;
+
+  lastEncoded = encoded; //store this value for next time  
+  
+  if (encoderValue != lastencoderValue) {
+    if ((encoderValue & 1) != 1) {    
+      if (encoderValue > lastencoderValue)
+        returnval = 1;
+      else
+        returnval = -1;
+        
+#ifdef DEBUG
+    Serial.print("Index:  ");
+    Serial.print(encoderValue);
+    Serial.print('\t');
+    Serial.print("Return:  ");
+    Serial.print(returnval);
+    Serial.print('\t');
+
+    Serial.print("Old-New AB Pattern:  ");
+
+    for (int i = 3; i >= 0; i-- )
+    {
+      Serial.print((sum >> i) & 0X01);//shift and select first bit
+    }
+ 
+    Serial.println();
+#endif
+    
+    }
+    lastencoderValue=encoderValue;
+  }
+
+  return returnval;
+}
+

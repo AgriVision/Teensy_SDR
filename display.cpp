@@ -11,7 +11,7 @@
 #define pos_x_smeter 5
 #define pos_y_smeter 80
 #define s_w 10
-#define pos_x_freq 30
+#define pos_x_freq 40
 #define pos_y_freq 104
 
 //#define DEBUG_SMETER
@@ -251,7 +251,7 @@ void show_signalstrength(String s) {
 
 // show radio mode
 void show_radiomode(String mode) { 
-  tft.fillRect(106, 108, 54, 14, BLACK); // erase old string
+  tft.fillRect(106, 108, 54, 18, BLACK); // erase old string
   tft.setFont(&FreeSans9pt7b);  
   tft.setTextColor(WHITE);
   tft.setCursor(106, 125);
@@ -259,7 +259,7 @@ void show_radiomode(String mode) {
 }  
 
 void show_band(String bandname) {  // show band
-  tft.fillRect(60, 108, 40, 14, BLACK); // erase old string
+  tft.fillRect(60, 108, 40, 18, BLACK); // erase old string
   tft.setFont(&FreeSans9pt7b);  
   tft.setTextColor(WHITE);
   tft.setCursor(60, 125);
@@ -268,12 +268,14 @@ void show_band(String bandname) {  // show band
 
 // show frequency
 void show_frequency(long int freq) { 
+    uint8_t offsetx = 0;
     tft.setFont(&FreeSans12pt7b);
     char string[80];   // print format stuff
     sprintf(string,"%d.%03d.%03d",freq/1000000,(freq-freq/1000000*1000000)/1000,
           freq%1000 );
+    if (freq<10000000) offsetx = 13;
     tft.fillRect(pos_x_freq,pos_y_freq-17,120,18,BLACK);
-    tft.setCursor(pos_x_freq, pos_y_freq);
+    tft.setCursor(pos_x_freq+offsetx, pos_y_freq);
     tft.setTextColor(WHITE);
     tft.print(string); 
 }    
