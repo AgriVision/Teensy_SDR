@@ -156,7 +156,7 @@ int lastencoderValue = 0;
 
 
 // Switches between pin and ground for USB/LSB/CW modes
-const int8_t ModeSW =6;    // USB/LSB
+const int8_t ModeSW =12;    // USB/LSB
 const int8_t BandSW =6;    // band selector
 const int8_t TuneSW =6;    // low for fast tune - encoder pushbutton
 
@@ -489,7 +489,7 @@ void loop()
   // every 50 ms, adjust the volume and check the switches
   if (ms_50.check() == 1) {
     float vol = analogRead(15);
-    vol = vol / 1023.0;
+    vol = sqrt(sqrt(sqrt(vol / 1023.0))); // compensate for log potmeter
     audioShield.volume(vol);
     
     if (!digitalRead(ModeSW)) {
