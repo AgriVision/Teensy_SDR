@@ -74,7 +74,7 @@ extern void show_waterfall(void); // waterfall display
 extern void show_bandwidth(int filterwidth);  // show filter bandwidth
 extern void show_radiomode(String mode, boolean highlight);  // show filter bandwidth
 extern void show_band(String bandname, boolean highlight); // show band
-extern void show_frequency(long freq);  // show frequency
+extern void show_frequency(long freq, boolean highlight);  // show frequency
 
 
 //#define  DEBUG
@@ -145,7 +145,7 @@ Adafruit_ST7735 tft = Adafruit_ST7735(cs, dc, mosi, sclk, rst); // soft SPI
 // encoder for tuning
 Encoder tune(16, 17);
 #define TUNE_STEP       1    // slow tuning rate 1hz steps for 100 pulses/ref encoder
-#define FAST_TUNE_STEP   100   // fast tuning rate 100hz steps
+#define FAST_TUNE_STEP   10000   // fast tuning rate 10khz steps
 
 // encoder for functions
 //Encoder encoder_functions(20,21);
@@ -496,7 +496,7 @@ void loop()
     vfo->setFrequency((unsigned long)bands[band].freq * MASTER_CLK_MULT);
     setband(bands[band].freq + IF_FREQ);         // check if we need to change the filter
 #endif
-    show_frequency(bands[band].freq + IF_FREQ);  // frequency we are listening to
+    show_frequency(bands[band].freq + IF_FREQ, function == FUNCTION_STEP);  // frequency we are listening to
   }
 
 
@@ -510,7 +510,7 @@ void loop()
         if (mode < SSB_USB) mode = CWR;
         setup_RX(mode);  // set up the audio chain for new mode
         break;
-      case FUNCTION_BAND:    // your hand is close to the sensor
+      case FUNCTION_BAND:
         band = band - stepswitch;
         if (band > LAST_BAND) band = LAST_BAND; // cycle thru radio bands
         if (band < FIRST_BAND) band = FIRST_BAND; // cycle thru radio bands
@@ -523,14 +523,20 @@ void loop()
         vfo->setFrequency((unsigned long)bands[band].freq * MASTER_CLK_MULT);
         setband(bands[band].freq + IF_FREQ);         // check if we need to change the filter
 #endif
-
-        show_frequency(bands[band].freq + IF_FREQ);  // frequency we are listening to
-
+        show_frequency(bands[band].freq + IF_FREQ, function == FUNCTION_STEP);  // frequency we are listening to
         break;
-      case FUNCTION_STEP:    // your hand is close to the sensor
+      case FUNCTION_STEP:
+        bands[band].freq -= stepswitch * FAST_TUNE_STEP; // fast tuning steps
+#ifdef SI5351
+        si5351.set_freq((unsigned long)bands[band].freq * MASTER_CLK_MULT, SI5351_PLL_FIXED, SI5351_CLK0);
+#endif
+#ifdef SI570
+        vfo->setFrequency((unsigned long)bands[band].freq * MASTER_CLK_MULT);
+        setband(bands[band].freq + IF_FREQ);         // check if we need to change the filter
+#endif
+        show_frequency(bands[band].freq + IF_FREQ, function == FUNCTION_STEP);  // frequency we are listening to
         break;
     }
-
   }
 
 
@@ -545,6 +551,7 @@ void loop()
         if (++function > LAST_FUNCTION) function = FIRST_FUNCTION; //cycle thru functions
         show_band(bands[band].name, function == FUNCTION_BAND); // show new band
         show_radiomode(modes[mode].name, function == FUNCTION_MODE);
+        show_frequency(bands[band].freq + IF_FREQ, function == FUNCTION_STEP);  // frequency we are listening to
         functionsw_state = 1; // flag switch is pressed
       }
     }
@@ -564,7 +571,7 @@ void loop()
         setband(bands[band].freq + IF_FREQ);         // check if we need to change the filter
 #endif
 
-        show_frequency(bands[band].freq + IF_FREQ);  // frequency we are listening to
+        show_frequency(bands[band].freq + IF_FREQ, function == FUNCTION_STEP);  // frequency we are listening to
         Bandsw_state = 1; // flag switch is pressed
       }
     }

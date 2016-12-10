@@ -275,7 +275,7 @@ void show_band(String bandname, boolean highlight) {  // show band
 }
 
 // show frequency
-void show_frequency(long int freq) {
+void show_frequency(long int freq, boolean highlight) {
   uint8_t offsetx = 0;
   tft.setFont(&FreeSans12pt7b);
   char string[80];   // print format stuff
@@ -284,6 +284,10 @@ void show_frequency(long int freq) {
   if (freq < 10000000) offsetx = 13;
   tft.fillRect(pos_x_freq, pos_y_freq - 17, 120, 18, BLACK);
   tft.setCursor(pos_x_freq + offsetx, pos_y_freq);
-  tft.setTextColor(WHITE);
+  if (highlight) {
+    tft.setTextColor(YELLOW);
+  } else {
+    tft.setTextColor(WHITE);
+  }
   tft.print(string);
 }
