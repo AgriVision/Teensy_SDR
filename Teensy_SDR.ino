@@ -474,7 +474,7 @@ void loop()
 {
   static uint8_t functionsw_state = 0;
   static int mode = SSB_LSB, stepswitch, function = FUNCTION_MODE;
-  static uint8_t band = STARTUP_BAND, Bandsw_state = 0;
+  static int band = STARTUP_BAND, Bandsw_state = 0;
   static long encoder_pos = 0, last_encoder_pos = 999;
   static long function_encoder_pos = 0, function_last_encoder_pos = 999;
   long encoder_change, function_encoder_change;
@@ -511,9 +511,9 @@ void loop()
         setup_RX(mode);  // set up the audio chain for new mode
         break;
       case FUNCTION_BAND:    // your hand is close to the sensor
-        band = band + stepswitch;
-        if (band > LAST_BAND) band = FIRST_BAND; // cycle thru radio bands
-        if (band < FIRST_BAND) band = LAST_BAND; // cycle thru radio bands
+        band = band - stepswitch;
+        if (band > LAST_BAND) band = LAST_BAND; // cycle thru radio bands
+        if (band < FIRST_BAND) band = FIRST_BAND; // cycle thru radio bands
         show_band(bands[band].name, function == FUNCTION_BAND); // show new band
 #ifdef SI5351
         si5351.set_freq((unsigned long)bands[band].freq * MASTER_CLK_MULT, SI5351_PLL_FIXED, SI5351_CLK0);
