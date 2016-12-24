@@ -15,8 +15,16 @@
       - added CW I/Q oscillators for CW transmit mode
       - added SSB and CW transmit
       - restructured the code to facilitate TX/RX switching
+   2016 Gerrit Polder, PA3BYA - adapted to the following hardware:
+      - Teensy 3.2 + Audio Shield
+      - SoftRock RXTX 6.3 using Si570
+      - 9V1AL Motherboard 3.6
+      - 100 pulses/rev rotary encoder for VFO
+      - cheap (24?) pulses/rev rotary encoder + switch for menu selection
+   12/16 GP
+      - added menu item for switching bandfilters 9V1AL motherboard   
    Todo:
-   clean up some more of the hard coded HW and UI stuff
+      lot of cleanups needed, add all amateur bands, wire filter selection, 
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -32,6 +40,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "Teensy_SDR.h"
 #include <Metro.h>
 #include <Audio.h>
 #include <Wire.h>
@@ -74,6 +83,7 @@ extern void show_waterfall(void); // waterfall display
 extern void show_bandwidth(int filterwidth);  // show filter bandwidth
 extern void show_radiomode(String mode, boolean highlight);  // show filter bandwidth
 extern void show_band(String bandname, boolean highlight); // show band
+extern void show_bandfilter(String bandname, boolean highlight); // show band
 extern void show_frequency(long freq, boolean highlight);  // show frequency
 
 
@@ -126,8 +136,9 @@ struct band bands[NUM_BANDS] = {
 #define FUNCTION_MODE 0
 #define FUNCTION_BAND 1
 #define FUNCTION_STEP 2
+#define FUNCTION_BANDFILTER 3
 #define FIRST_FUNCTION 0
-#define LAST_FUNCTION 2
+#define LAST_FUNCTION 3
 
 
 //SPI connections for Adafruit ST7735 1.8" display
@@ -232,6 +243,22 @@ struct modestruct modes[NUM_MODES] = {
   CWR, LSB_NARROW, "CWR",
 };
 
+// bandfilter selection stuff
+#define FIRST_BANDFILTER 0
+#define LAST_BANDFILTER 3
+#define NUM_BANDFILTERS LAST_BANDFILTER - FIRST_BANDFILTER +1
+
+struct bandfilterstruct {
+  int filternum;
+  String name;
+};
+
+struct bandfilterstruct bandfilters[NUM_BANDFILTERS] = {
+  0, "B0",
+  1, "B1",
+  2, "B2",
+  3, "B3",
+};
 
 // audio definitions
 //  RX & TX audio input definitions
@@ -433,6 +460,7 @@ void setup()
 
   // set up initial band and frequency
   show_band(bands[STARTUP_BAND].name, false);
+  show_bandfilter(bandfilters[0].name, false);
 
 #ifdef SI570
 
@@ -475,6 +503,7 @@ void loop()
   static uint8_t functionsw_state = 0;
   static int mode = SSB_LSB, stepswitch, function = FUNCTION_MODE;
   static int band = STARTUP_BAND, Bandsw_state = 0;
+  static int bandfilter = 0;
   static long encoder_pos = 0, last_encoder_pos = 999;
   static long function_encoder_pos = 0, function_last_encoder_pos = 999;
   long encoder_change, function_encoder_change;
@@ -536,6 +565,12 @@ void loop()
 #endif
         show_frequency(bands[band].freq + IF_FREQ, function == FUNCTION_STEP);  // frequency we are listening to
         break;
+      case FUNCTION_BANDFILTER:
+        bandfilter = bandfilter - stepswitch;
+        if (bandfilter > LAST_BANDFILTER) bandfilter = LAST_BANDFILTER; // cycle thru radio bands
+        if (bandfilter < FIRST_BANDFILTER) bandfilter = FIRST_BANDFILTER; // cycle thru radio bands
+        show_bandfilter(bandfilters[bandfilter].name, function == FUNCTION_BANDFILTER); // show new band
+        break;
     }
   }
 
@@ -552,6 +587,7 @@ void loop()
         show_band(bands[band].name, function == FUNCTION_BAND); // show new band
         show_radiomode(modes[mode].name, function == FUNCTION_MODE);
         show_frequency(bands[band].freq + IF_FREQ, function == FUNCTION_STEP);  // frequency we are listening to
+        show_bandfilter(bandfilters[bandfilter].name, function == FUNCTION_BANDFILTER);
         functionsw_state = 1; // flag switch is pressed
       }
     }

@@ -1,0 +1,2 @@
+#define MAIN_VERSION_NUMBER 1.1
+

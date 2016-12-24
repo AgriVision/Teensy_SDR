@@ -1,6 +1,7 @@
 
 // code for the TFT display
 
+#include "Teensy_SDR.h"
 #include "display.h"
 #include <Audio.h>
 #include <Adafruit_GFX.h>        // LCD Core graphics library
@@ -47,7 +48,8 @@ void intro_display(void) {
   tft.setCursor(0, 80);
   tft.print("PA3BYA");
   tft.setCursor(0, 100);
-  tft.print("version: 1.0");
+  tft.print("version: ");
+  tft.print(MAIN_VERSION_NUMBER);
   tft.setCursor(0, 120);
   tft.print("build: ");
   tft.print(__DATE__);
@@ -272,6 +274,18 @@ void show_band(String bandname, boolean highlight) {  // show band
   }
   tft.setCursor(60, 125);
   tft.print(bandname);
+}
+
+void show_bandfilter(String bandfiltername, boolean highlight) {  // show band
+  tft.fillRect(0, 108, 40, 18, BLACK); // erase old string
+  tft.setFont(&FreeSans9pt7b);
+  if (highlight) {
+    tft.setTextColor(YELLOW);
+  } else {
+    tft.setTextColor(WHITE);
+  }
+  tft.setCursor(0, 125);
+  tft.print(bandfiltername);
 }
 
 // show frequency
