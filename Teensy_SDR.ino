@@ -23,6 +23,8 @@
       - cheap (24?) pulses/rev rotary encoder + switch for menu selection
    12/16 GP
       - added menu item for switching bandfilters 9V1AL motherboard
+      - added automatic band switching
+      - cleanup - removed band and fast tune switch
    Todo:
       lot of cleanups needed, add all amateur bands, wire filter selection,
 
@@ -174,13 +176,9 @@ int encoderValue = 0;
 int lastencoderValue = 0;
 
 
-// Switches between pin and ground for USB/LSB/CW modes
+// Switches between pin and ground for selecting function mode
 const int8_t FunctionSW = 12;   // Select function for encoder 2
-const int8_t BandSW = 6;   // band selector
-const int8_t TuneSW = 6;   // low for fast tune - encoder pushbutton
-
-// SEL0 and SEL1 control lines for the Softrock RX ABPF
-
+// SEL0 and SEL1 control lines for the 9V1AL motherboard band switching
 const int8_t SEL0 = SEL0_PIN;   // - SEL0 - Teensy pin SEL0_PIN -> 9V1AL P7 pin 1
 const int8_t SEL1 = SEL1_PIN;   // - SEL1 - Teensy pin SEL1_PIN -> 9V1AL P7 pin 2
 
@@ -367,8 +365,6 @@ void setup()
 #endif
   pinMode(BACKLIGHT, INPUT_PULLUP); // yanks up display BackLight signal
   pinMode(FunctionSW, INPUT_PULLUP);  // USB/LSB switch
-  pinMode(BandSW, INPUT_PULLUP);  // filter width switch
-  pinMode(TuneSW, INPUT_PULLUP);  // tuning rate = high
   pinMode(PTTSW, INPUT_PULLUP);  // PTT input
   pinMode(PTTout, OUTPUT);  // PTT output to softrock
   digitalWrite(PTTout, 0); // turn off TX mode
@@ -517,8 +513,7 @@ void loop()
     encoder_change = encoder_pos - last_encoder_pos;
     last_encoder_pos = encoder_pos;
     // press encoder button for fast tuning
-    if (digitalRead(TuneSW)) bands[band].freq += encoder_change * TUNE_STEP; // tune the master vfo - normal steps
-    else bands[band].freq += encoder_change * FAST_TUNE_STEP; // fast tuning steps
+    bands[band].freq += encoder_change * TUNE_STEP; // tune the master vfo - normal steps
 
 #ifdef SI5351
     si5351.set_freq((unsigned long)bands[band].freq * MASTER_CLK_MULT, SI5351_PLL_FIXED, SI5351_CLK0);
@@ -599,26 +594,6 @@ void loop()
       }
     }
     else functionsw_state = 0; // flag switch not pressed
-
-    if (!digitalRead(BandSW)) {
-      if (Bandsw_state == 0) { // switch was pressed - falling edge
-        if (++band > LAST_BAND) band = FIRST_BAND; // cycle thru radio bands
-        show_band(bands[band].name, function == FUNCTION_BAND); // show new band
-
-#ifdef SI5351
-        si5351.set_freq((unsigned long)bands[band].freq * MASTER_CLK_MULT, SI5351_PLL_FIXED, SI5351_CLK0);
-#endif
-
-#ifdef SI570
-        vfo->setFrequency((unsigned long)bands[band].freq * MASTER_CLK_MULT);
-        bandfilter = setband(bands[band].freq + IF_FREQ);         // check if we need to change the filter
-#endif
-        show_bandfilter(bandfilters[bandfilter].name, function == FUNCTION_BANDFILTER); // show new band
-        show_frequency(bands[band].freq + IF_FREQ, function == FUNCTION_STEP);  // frequency we are listening to
-        Bandsw_state = 1; // flag switch is pressed
-      }
-    }
-    else Bandsw_state = 0; // flag switch not pressed
   }
 
 
