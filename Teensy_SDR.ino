@@ -22,9 +22,9 @@
       - 100 pulses/rev rotary encoder for VFO
       - cheap (24?) pulses/rev rotary encoder + switch for menu selection
    12/16 GP
-      - added menu item for switching bandfilters 9V1AL motherboard   
+      - added menu item for switching bandfilters 9V1AL motherboard
    Todo:
-      lot of cleanups needed, add all amateur bands, wire filter selection, 
+      lot of cleanups needed, add all amateur bands, wire filter selection,
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -55,6 +55,9 @@
 #include "display.h"
 #include <SerialFlash.h>
 
+//#define  DEBUG
+//#define DEBUG_TIMING  // for timing execution - monitor HW pin
+
 
 #define SI570					// Uncomment for SoftRock RX Ensemble II/III Receiver Kit support
 //#define SI5351
@@ -65,7 +68,8 @@
 #define SI570_I2C_ADDRESS 0x55
 #define SI570_CALIBRATION 42800000
 #endif
-#define SEL0_PIN 4
+
+#define SEL0_PIN 4  // bandfilter selection pins
 #define SEL1_PIN 8
 
 
@@ -86,9 +90,6 @@ extern void show_band(String bandname, boolean highlight); // show band
 extern void show_bandfilter(String bandname, boolean highlight); // show band
 extern void show_frequency(long freq, boolean highlight);  // show frequency
 
-
-//#define  DEBUG
-//#define DEBUG_TIMING  // for timing execution - monitor HW pin
 
 // SW configuration defines
 // don't use more than one AGC!
@@ -180,8 +181,8 @@ const int8_t TuneSW = 6;   // low for fast tune - encoder pushbutton
 
 // SEL0 and SEL1 control lines for the Softrock RX ABPF
 
-const int8_t SEL0 = SEL0_PIN;   // - SEL0 - Teensy pin SEL0_PIN -> ATTiny85 pin 3
-const int8_t SEL1 = SEL1_PIN;   // - SEL1 - Teensy pin SEL1_PIN -> ATTiny85 pin 1
+const int8_t SEL0 = SEL0_PIN;   // - SEL0 - Teensy pin SEL0_PIN -> 9V1AL P7 pin 1
+const int8_t SEL1 = SEL1_PIN;   // - SEL1 - Teensy pin SEL1_PIN -> 9V1AL P7 pin 2
 
 // see define above - pin 4 used for SW execution timing & debugging
 #ifdef  DEBUG_TIMING
@@ -250,14 +251,16 @@ struct modestruct modes[NUM_MODES] = {
 
 struct bandfilterstruct {
   int filternum;
+  long lowcutoff;
+  long highcutoff;
   String name;
 };
 
 struct bandfilterstruct bandfilters[NUM_BANDFILTERS] = {
-  0, "B0",
-  1, "B1",
-  2, "B2",
-  3, "B3",
+  0,        0,  2500000, "B0",
+  1,  2500001,  9000000, "B1",
+  2,  9000001, 20000000, "B2",
+  3, 20000001, 40000000, "B3",
 };
 
 // audio definitions
@@ -503,7 +506,7 @@ void loop()
   static uint8_t functionsw_state = 0;
   static int mode = SSB_LSB, stepswitch, function = FUNCTION_MODE;
   static int band = STARTUP_BAND, Bandsw_state = 0;
-  static int bandfilter = 0;
+  static uint8_t bandfilter = 0;
   static long encoder_pos = 0, last_encoder_pos = 999;
   static long function_encoder_pos = 0, function_last_encoder_pos = 999;
   long encoder_change, function_encoder_change;
@@ -523,8 +526,9 @@ void loop()
 
 #ifdef SI570
     vfo->setFrequency((unsigned long)bands[band].freq * MASTER_CLK_MULT);
-    setband(bands[band].freq + IF_FREQ);         // check if we need to change the filter
+    bandfilter = setband(bands[band].freq + IF_FREQ);         // check if we need to change the filter
 #endif
+    show_bandfilter(bandfilters[bandfilter].name, function == FUNCTION_BANDFILTER); // show new band
     show_frequency(bands[band].freq + IF_FREQ, function == FUNCTION_STEP);  // frequency we are listening to
   }
 
@@ -550,8 +554,9 @@ void loop()
 
 #ifdef SI570
         vfo->setFrequency((unsigned long)bands[band].freq * MASTER_CLK_MULT);
-        setband(bands[band].freq + IF_FREQ);         // check if we need to change the filter
+        bandfilter = setband(bands[band].freq + IF_FREQ);         // check if we need to change the filter
 #endif
+        show_bandfilter(bandfilters[bandfilter].name, function == FUNCTION_BANDFILTER); // show new band
         show_frequency(bands[band].freq + IF_FREQ, function == FUNCTION_STEP);  // frequency we are listening to
         break;
       case FUNCTION_STEP:
@@ -561,14 +566,16 @@ void loop()
 #endif
 #ifdef SI570
         vfo->setFrequency((unsigned long)bands[band].freq * MASTER_CLK_MULT);
-        setband(bands[band].freq + IF_FREQ);         // check if we need to change the filter
+        bandfilter = setband(bands[band].freq + IF_FREQ);         // check if we need to change the filter
 #endif
+        show_bandfilter(bandfilters[bandfilter].name, function == FUNCTION_BANDFILTER); // show new band
         show_frequency(bands[band].freq + IF_FREQ, function == FUNCTION_STEP);  // frequency we are listening to
         break;
       case FUNCTION_BANDFILTER:
         bandfilter = bandfilter - stepswitch;
         if (bandfilter > LAST_BANDFILTER) bandfilter = LAST_BANDFILTER; // cycle thru radio bands
         if (bandfilter < FIRST_BANDFILTER) bandfilter = FIRST_BANDFILTER; // cycle thru radio bands
+        select_filter_band(bandfilters[bandfilter].filternum);
         show_bandfilter(bandfilters[bandfilter].name, function == FUNCTION_BANDFILTER); // show new band
         break;
     }
@@ -604,9 +611,9 @@ void loop()
 
 #ifdef SI570
         vfo->setFrequency((unsigned long)bands[band].freq * MASTER_CLK_MULT);
-        setband(bands[band].freq + IF_FREQ);         // check if we need to change the filter
+        bandfilter = setband(bands[band].freq + IF_FREQ);         // check if we need to change the filter
 #endif
-
+        show_bandfilter(bandfilters[bandfilter].name, function == FUNCTION_BANDFILTER); // show new band
         show_frequency(bands[band].freq + IF_FREQ, function == FUNCTION_STEP);  // frequency we are listening to
         Bandsw_state = 1; // flag switch is pressed
       }
@@ -795,28 +802,22 @@ void setup_TX(int mode)
 
 #ifdef SI570
 
-void setband(unsigned long freq)
+uint8_t setband(unsigned long freq)
 {
-  if ( freq >= 1000000 && freq < 4000000)
-  {
-    digitalWrite(SEL0, LOW);
-    digitalWrite(SEL1, LOW);
+  for (int i = 0; i < NUM_BANDFILTERS; i++) {
+    if ( freq >= bandfilters[i].lowcutoff && freq <=  bandfilters[i].highcutoff)
+    {
+      uint8_t bandfilter = bandfilters[i].filternum;
+      select_filter_band(bandfilter);
+      return bandfilter;
+    }
   }
-  if ( freq >= 4000000 && freq < 7000000)
-  {
-    digitalWrite(SEL0, LOW);
-    digitalWrite(SEL1, HIGH);
-  }
-  if ( freq >= 7000000 && freq < 16000000)
-  {
-    digitalWrite(SEL0, HIGH);
-    digitalWrite(SEL1, LOW);
-  }
-  if ( freq >= 16000000 && freq < 30000000)
-  {
-    digitalWrite(SEL0, HIGH);
-    digitalWrite(SEL1, HIGH);
-  }
+}
+
+void select_filter_band(uint8_t band)
+{
+  digitalWrite(SEL0, bool(band & 1));
+  digitalWrite(SEL1, bool(band & 2));
 }
 
 #endif
