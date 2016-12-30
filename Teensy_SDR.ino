@@ -25,8 +25,9 @@
       - added menu item for switching bandfilters 9V1AL motherboard
       - added automatic band switching
       - cleanup - removed band and fast tune switch
+      - cleanup - removed SI5351
    Todo:
-      lot of cleanups needed, add all amateur bands, wire filter selection,
+      add all amateur bands
 
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
@@ -61,23 +62,14 @@
 //#define DEBUG_TIMING  // for timing execution - monitor HW pin
 
 
-#define SI570					// Uncomment for SoftRock RX Ensemble II/III Receiver Kit support
-//#define SI5351
-
-#ifdef SI570
 
 #include "Si570.h"
 #define SI570_I2C_ADDRESS 0x55
 #define SI570_CALIBRATION 42800000
-#endif
 
 #define SEL0_PIN 4  // bandfilter selection pins
 #define SEL1_PIN 8
 
-
-#ifdef SI5351
-#include <si5351.h>
-#endif
 
 extern void agc(void);      // RX agc function
 extern void setup_display(void);
@@ -195,17 +187,9 @@ Bounce  PTT_in = Bounce();   // debouncer
 #define IF_FREQ 11000       // IF Oscillator frequency
 #define CW_FREQ 700        // audio tone frequency used for CW
 
-// clock generator SI5351
-
-#ifdef SI5351
-Si5351 si5351;
-#endif
 
 // clock generator SI570
-
-#ifdef SI570
 Si570 *vfo;
-#endif
 
 #define MASTER_CLK_MULT  4  // softrock requires 4x clock
 
@@ -396,14 +380,11 @@ void setup()
   //let start be lastEncoded so will index on first click
   lastEncoded = (lastMSB << 1) | lastLSB;
 
-#ifdef SI570
   pinMode(SEL1_PIN, OUTPUT); 	// set SEL1_PIN and SEL1_PIN as ouputs
   pinMode(SEL0_PIN, OUTPUT);
 
   digitalWrite(SEL0_PIN, HIGH); // selects filter for default 40M band
   digitalWrite(SEL1_PIN, LOW);
-#endif
-
 
 #ifdef  DEBUG_TIMING
   pinMode(DEBUG_PIN, OUTPUT);  // for execution time monitoring with a scope
@@ -456,12 +437,9 @@ void setup()
   delay(2000);
   main_display();
 
-
   // set up initial band and frequency
   show_band(bands[STARTUP_BAND].name, false);
   show_bandfilter(bandfilters[0].name, false);
-
-#ifdef SI570
 
   vfo = new Si570(SI570_I2C_ADDRESS, SI570_CALIBRATION);
 
@@ -473,20 +451,6 @@ void setup()
   vfo->setFrequency((unsigned long)bands[STARTUP_BAND].freq * MASTER_CLK_MULT);
 
   delay(3);
-
-#endif
-
-
-#ifdef SI5351
-
-  // set up clk gen
-  si5351.init(SI5351_CRYSTAL_LOAD_8PF);
-  si5351.set_correction(-100);  // I did a by ear correction to WWV
-  // Set CLK0 to output 14 MHz with a fixed PLL frequency
-  si5351.set_pll(SI5351_PLL_FIXED, SI5351_PLLA);
-  si5351.set_freq((unsigned long)bands[STARTUP_BAND].freq * MASTER_CLK_MULT, SI5351_PLL_FIXED, SI5351_CLK0);
-
-#endif
 
   setup_RX(SSB_LSB);  // set up the audio chain for LSB reception
 
@@ -514,15 +478,8 @@ void loop()
     last_encoder_pos = encoder_pos;
     // press encoder button for fast tuning
     bands[band].freq += encoder_change * TUNE_STEP; // tune the master vfo - normal steps
-
-#ifdef SI5351
-    si5351.set_freq((unsigned long)bands[band].freq * MASTER_CLK_MULT, SI5351_PLL_FIXED, SI5351_CLK0);
-#endif
-
-#ifdef SI570
     vfo->setFrequency((unsigned long)bands[band].freq * MASTER_CLK_MULT);
     bandfilter = setband(bands[band].freq + IF_FREQ);         // check if we need to change the filter
-#endif
     show_bandfilter(bandfilters[bandfilter].name, function == FUNCTION_BANDFILTER); // show new band
     show_frequency(bands[band].freq + IF_FREQ, function == FUNCTION_STEP);  // frequency we are listening to
   }
@@ -543,26 +500,16 @@ void loop()
         if (band > LAST_BAND) band = LAST_BAND; // cycle thru radio bands
         if (band < FIRST_BAND) band = FIRST_BAND; // cycle thru radio bands
         show_band(bands[band].name, function == FUNCTION_BAND); // show new band
-#ifdef SI5351
-        si5351.set_freq((unsigned long)bands[band].freq * MASTER_CLK_MULT, SI5351_PLL_FIXED, SI5351_CLK0);
-#endif
 
-#ifdef SI570
         vfo->setFrequency((unsigned long)bands[band].freq * MASTER_CLK_MULT);
         bandfilter = setband(bands[band].freq + IF_FREQ);         // check if we need to change the filter
-#endif
         show_bandfilter(bandfilters[bandfilter].name, function == FUNCTION_BANDFILTER); // show new band
         show_frequency(bands[band].freq + IF_FREQ, function == FUNCTION_STEP);  // frequency we are listening to
         break;
       case FUNCTION_STEP:
         bands[band].freq -= stepswitch * FAST_TUNE_STEP; // fast tuning steps
-#ifdef SI5351
-        si5351.set_freq((unsigned long)bands[band].freq * MASTER_CLK_MULT, SI5351_PLL_FIXED, SI5351_CLK0);
-#endif
-#ifdef SI570
         vfo->setFrequency((unsigned long)bands[band].freq * MASTER_CLK_MULT);
         bandfilter = setband(bands[band].freq + IF_FREQ);         // check if we need to change the filter
-#endif
         show_bandfilter(bandfilters[bandfilter].name, function == FUNCTION_BANDFILTER); // show new band
         show_frequency(bands[band].freq + IF_FREQ, function == FUNCTION_STEP);  // frequency we are listening to
         break;
@@ -611,9 +558,6 @@ void loop()
     tft.print("TX");
     setup_TX(mode);  // set up the audio chain for transmit mode
     // in TX mode we don't use an IF so we have to shift the TX frequency up by the IF frequency
-#ifdef SI5351
-    si5351.set_freq((unsigned long)bands[band].freq * MASTER_CLK_MULT, SI5351_PLL_FIXED, SI5351_CLK0);
-#endif
     delay(2); // short delay to allow things to settle
     digitalWrite(PTTout, 1); // transmitter on
     while ( !PTT_in.read()) { // wait for PTT release
@@ -622,9 +566,7 @@ void loop()
     }
     digitalWrite(PTTout, 0); // transmitter off
     // restore the master clock to the RX frequency
-#ifdef SI5351
-    si5351.set_freq((unsigned long)bands[band].freq * MASTER_CLK_MULT, SI5351_PLL_FIXED, SI5351_CLK0);
-#endif
+
     setup_RX(mode);  // set up the audio chain for RX mode
     tft.fillRect(75, 72, 11, 10, BLACK);// erase text
   }
@@ -775,7 +717,6 @@ void setup_TX(int mode)
   AudioInterrupts();
 }
 
-#ifdef SI570
 
 uint8_t setband(unsigned long freq)
 {
@@ -795,7 +736,6 @@ void select_filter_band(uint8_t band)
   digitalWrite(SEL1, bool(band & 2));
 }
 
-#endif
 
 int functionencoder(void) {
   // function encoder
