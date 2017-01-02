@@ -265,14 +265,14 @@ void show_radiomode(String mode, boolean highlight) {
 }
 
 void show_band(String bandname, boolean highlight) {  // show band
-  tft.fillRect(60, 108, 40, 18, BLACK); // erase old string
+  tft.fillRect(50, 108, 50, 18, BLACK); // erase old string
   tft.setFont(&FreeSans9pt7b);
   if (highlight) {
     tft.setTextColor(YELLOW);
   } else {
     tft.setTextColor(WHITE);
   }
-  tft.setCursor(60, 125);
+  tft.setCursor(50, 125);
   tft.print(bandname);
 }
 

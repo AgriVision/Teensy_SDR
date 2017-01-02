@@ -95,6 +95,10 @@ extern void show_frequency(long freq, boolean highlight);  // show frequency
 //#define CW_WATERFALL // define for experimental CW waterfall - needs faster update rate
 #define AUDIO_STATS    // shows audio library CPU utilization etc on serial console
 
+// in receive mode we use an audio IF to avoid the noise, offset and hum below ~ 1khz
+#define IF_FREQ 11000       // IF Oscillator frequency
+#define CW_FREQ 700        // audio tone frequency used for CW
+
 // band selection stuff
 struct band {
   long freq;
@@ -105,24 +109,37 @@ struct band {
 
 #ifdef SOFTROCK_40M
 
-#define BAND_80M  0   // these can be in any order but indexes need to be sequential for band switching code
-#define BAND_60M  1
-#define BAND_49M  2
-#define BAND_40M  3
-#define BAND_31M  4
-#define BAND_30M  5
+#define BAND_160M  0   // these can be in any order but indexes need to be sequential for band switching code
+#define BAND_80M  1   
+#define BAND_60M  2
+#define BAND_49M  3
+#define BAND_40M  4
+#define BAND_31M  5
+#define BAND_30M  6
+#define BAND_20M  7
+#define BAND_17M  8
+#define BAND_15M  9
+#define BAND_12M  10
+#define BAND_10M  11
 
-#define FIRST_BAND BAND_80M
-#define LAST_BAND  BAND_30M
+
+#define FIRST_BAND BAND_160M
+#define LAST_BAND  BAND_10M
 #define NUM_BANDS  LAST_BAND - FIRST_BAND + 1
 
 struct band bands[NUM_BANDS] = {
-  3580000, "80M",
-  5000000, "60M",
-  6000000, "49M",
-  7040000, "40M",
-  9500000, "31M",
-  10115000, "30M"
+  1840000-IF_FREQ, "160M",
+  3580000-IF_FREQ, "80M",
+  5354000-IF_FREQ, "60M",
+  6000000-IF_FREQ, "49M",
+  7040000-IF_FREQ, "40M",
+  9500000-IF_FREQ, "31M",
+  10140000-IF_FREQ, "30M",
+  14100000-IF_FREQ, "20M",
+  18100000-IF_FREQ, "17M",
+  21100000-IF_FREQ, "15M",
+  24930000-IF_FREQ, "12M",
+  28200000-IF_FREQ, "10M"
 };
 #define STARTUP_BAND BAND_40M    // 
 #endif
@@ -182,11 +199,6 @@ const int8_t PTTSW = 6;    // also used as SDCS on the audio card - can't use an
 const int8_t PTTout = 5;    // PTT signal to softrock
 
 Bounce  PTT_in = Bounce();   // debouncer
-
-// in receive mode we use an audio IF to avoid the noise, offset and hum below ~ 1khz
-#define IF_FREQ 11000       // IF Oscillator frequency
-#define CW_FREQ 700        // audio tone frequency used for CW
-
 
 // clock generator SI570
 Si570 *vfo;
@@ -449,6 +461,7 @@ void setup()
     delay(10000);
   }
   vfo->setFrequency((unsigned long)bands[STARTUP_BAND].freq * MASTER_CLK_MULT);
+  show_frequency(bands[STARTUP_BAND].freq + IF_FREQ, false);  // frequency we are listening to
 
   delay(3);
 
@@ -467,7 +480,7 @@ void loop()
   static int mode = SSB_LSB, stepswitch, function = FUNCTION_MODE;
   static int band = STARTUP_BAND, Bandsw_state = 0;
   static uint8_t bandfilter = 0;
-  static long encoder_pos = 0, last_encoder_pos = 999;
+  static long encoder_pos = 0, last_encoder_pos = 0;
   static long function_encoder_pos = 0, function_last_encoder_pos = 999;
   long encoder_change, function_encoder_change;
 
@@ -476,7 +489,6 @@ void loop()
   if (encoder_pos != last_encoder_pos) {
     encoder_change = encoder_pos - last_encoder_pos;
     last_encoder_pos = encoder_pos;
-    // press encoder button for fast tuning
     bands[band].freq += encoder_change * TUNE_STEP; // tune the master vfo - normal steps
     vfo->setFrequency((unsigned long)bands[band].freq * MASTER_CLK_MULT);
     bandfilter = setband(bands[band].freq + IF_FREQ);         // check if we need to change the filter
